@@ -1,32 +1,27 @@
 <?php
 @include 'conn.php';
 
-$isAdmin = true; 
-
-if (!$isAdmin) {
-   header("Location: login.php");
-   exit;
-}
-
+// Fetch orders for the user side
 $query = "SELECT * FROM `order`";
 $result = mysqli_query($conn, $query);
 
-
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_order'])) {
+// Handle marking orders as received
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['mark_received'])) {
     $orderId = $_POST['order_id'];
 
-    
-    $deleteQuery = "DELETE FROM `order` WHERE id = ?";
-    $stmt = mysqli_prepare($conn, $deleteQuery);
+    // Update the order status to mark it as received
+    $updateQuery = "UPDATE `order` SET order_status = 1 WHERE id = ?";
+    $stmt = mysqli_prepare($conn, $updateQuery);
     mysqli_stmt_bind_param($stmt, 'i', $orderId);
     mysqli_stmt_execute($stmt);
 
-   
+    // Check if the update was successful
     if (mysqli_stmt_affected_rows($stmt) > 0) {
+        // Redirect back to the same page to refresh the order list
         header("Location: ".$_SERVER['PHP_SELF']);
         exit();
     } else {
-        echo "Failed to remove order.";
+        echo "Failed to mark order as received.";
     }
 }
 ?>
@@ -42,10 +37,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_order'])) {
    <link rel="stylesheet" href="sale.css">
 </head>
 <body>
-   
-
-   <h1>Order List</h1>
-<a href="Admin.php" class="btn" >HOME</a>
+   <h1>My Orders</h1>
+<a href="products.php" class="btn">Home</a>
    <table>
       <thead>
          <tr>
@@ -76,22 +69,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_order'])) {
             echo "<td>" . $row['zip_code'] . "</td>";
             echo "<td>" . $row['total_price'] . "</td>";
             echo "<td>" . ($row['order_status'] ? 'Received' : 'Not Received') . "</td>";
-            echo "<td>
-                    <form method='post' action='".$_SERVER['PHP_SELF']."' onsubmit='return confirmDelete()'>
-                        <input type='hidden' name='order_id' value='" . $row['id'] . "'>
-                        <button type='submit' name='remove_order'>Remove</button>
-                    </form>
-                  </td>";
+            echo "<td>";
+            if (!$row['order_status']) {
+               echo "<form method='post' action='".$_SERVER['PHP_SELF']."'>";
+               echo "<input type='hidden' name='order_id' value='" . $row['id'] . "'>";
+               echo "<button type='submit' name='mark_received'>Mark Received</button>";
+               echo "</form>";
+            }
+            echo "</td>";
             echo "</tr>";
          }
          ?>
       </tbody>
    </table>
 
-   <script>
-      function confirmDelete() {
-         return confirm("Are you sure you want to delete this order?");
-      }
-   </script>
 </body>
 </html>
